@@ -1,0 +1,2 @@
+config BOARD_KARTCAM_TIRE
+	select SOC_NRF52832_QFAA

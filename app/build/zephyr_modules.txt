@@ -1,0 +1,4 @@
+"kartcam_tire":"/home/wadeb/kartcam_zephyr/kartcam_tire":""
+"cmsis_6":"/home/wadeb/kartcam_zephyr/modules/hal/cmsis_6":"${ZEPHYR_CMSIS_6_CMAKE_DIR}"
+"hal_nordic":"/home/wadeb/kartcam_zephyr/modules/hal/nordic":"${ZEPHYR_HAL_NORDIC_CMAKE_DIR}"
+"segger":"/home/wadeb/kartcam_zephyr/modules/debug/segger":"${ZEPHYR_SEGGER_CMAKE_DIR}"
