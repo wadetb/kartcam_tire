@@ -133,9 +133,10 @@ int main(void)
 
 		float temp, pressure;
 		dps368_read(&temp, &pressure);
-		LOG_INF("DPS368 Temp: %f C (%f F) Pressure: %f", temp, (temp * 9.0f/5.0f + 32.0f), pressure);
+		float temp_f = temp * 9.0f/5.0f + 32.0f;
+		LOG_INF("DPS368 Temp: %f C (%f F) Pressure: %f", (double)temp, (double)temp_f, (double)pressure);
 
-		k_msleep(1000);
+		k_msleep(100);
 
 		if (n % 4 == 0) gpio_pin_toggle_dt(&led0);
 		if (n % 4 == 1) gpio_pin_toggle_dt(&led1);

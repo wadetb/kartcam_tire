@@ -10,17 +10,17 @@ extern struct spi_dt_spec dps368;
 
 LOG_MODULE_REGISTER(DPS368);
 
-int32_t c0Half;
-int32_t c1;
-int32_t c00;
-int32_t c10;
-int32_t c20;
-int32_t c30;
-int32_t c01;
-int32_t c11;
-int32_t c21;
+float c0Half;
+float c1;
+float c00;
+float c10;
+float c20;
+float c30;
+float c01;
+float c11;
+float c21;
 
-int32_t scaling_facts[] = {524288, 1572864, 3670016, 7864320, 253952, 516096, 1040384, 2088960};
+float scaling_facts[] = {524288, 1572864, 3670016, 7864320, 253952, 516096, 1040384, 2088960};
 int tmp_osr;
 int prs_osr;
 
@@ -58,16 +58,9 @@ void dps368_read_coefs(void)
     c21 = twoc(((uint32_t)coef[14] << 8) | (uint32_t)coef[15], 16);
     c30 = twoc(((uint32_t)coef[16] << 8) | (uint32_t)coef[17], 16);
 
-    LOG_INF("DPS368 Coefficients:");
-    LOG_INF("c0Half: %d", c0Half);
-    LOG_INF("c1: %d", c1);
-    LOG_INF("c00: %d", c00);
-    LOG_INF("c10: %d", c10);
-    LOG_INF("c20: %d", c20);
-    LOG_INF("c30: %d", c30);
-    LOG_INF("c01: %d", c01);
-    LOG_INF("c11: %d", c11);
-    LOG_INF("c21: %d", c21);
+    LOG_INF("c0Half: %f c1: %f", c0Half, c1);
+    LOG_INF("c00: %f c10: %f c20: %f c30: %f", c00, c10, c20, c30);
+    LOG_INF("c01: %f c11: %f c21: %f", c01, c11, c21);
 }
 
 void dps368_init(void)
