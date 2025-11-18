@@ -20,7 +20,7 @@ float c01;
 float c11;
 float c21;
 
-float scaling_facts[] = {524288, 1572864, 3670016, 7864320, 253952, 516096, 1040384, 2088960};
+float scaling_facts[] = {524288.0f, 1572864.0f, 3670016.0f, 7864320.0f, 253952.0f, 516096.0f, 1040384.0f, 2088960.0f};
 int tmp_osr;
 int prs_osr;
 
@@ -58,9 +58,9 @@ void dps368_read_coefs(void)
     c21 = twoc(((uint32_t)coef[14] << 8) | (uint32_t)coef[15], 16);
     c30 = twoc(((uint32_t)coef[16] << 8) | (uint32_t)coef[17], 16);
 
-    LOG_INF("c0Half: %f c1: %f", c0Half, c1);
-    LOG_INF("c00: %f c10: %f c20: %f c30: %f", c00, c10, c20, c30);
-    LOG_INF("c01: %f c11: %f c21: %f", c01, c11, c21);
+    LOG_INF("c0Half: %f c1: %f", (double)c0Half, (double)c1);
+    LOG_INF("c00: %f c10: %f c20: %f c30: %f", (double)c00, (double)c10, (double)c20, (double)c30);
+    LOG_INF("c01: %f c11: %f c21: %f", (double)c01, (double)c11, (double)c21);
 }
 
 void dps368_init(void)

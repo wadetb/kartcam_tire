@@ -1,0 +1,13 @@
+description: |
+  KartCam LIS3DHTR binding
+
+compatible: "kartcam,lis3dhtr-spi"
+
+include:
+  - name: spi-device.yaml
+
+properties:
+  int-gpios:
+    type: phandle-array
+    description: Interrupt GPIO from the sensor
+    required: false

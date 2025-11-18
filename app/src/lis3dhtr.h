@@ -183,11 +183,24 @@
 
 #define LIS3DHTR_REG_ACCEL_STATUS2_UPDATE_MASK (0x08)   // Has New Data Flag Mask
 
+/**************************************************************************
+    ACCELEROMETER CONTROL REGISTER 5 DESCRIPTION
+**************************************************************************/
+#define LIS3DHTR_REG_ACCEL_CTRL_REG5_BOOT        (0x80)  // Reboot memory content
+#define LIS3DHTR_REG_ACCEL_CTRL_REG5_FIFO_ENABLE (0x40)  // FIFO Enable
+#define LIS3DHTR_REG_ACCEL_CTRL_REG5_LIR_INT1    (0x20) // Latch Interrupt Request on INT1_SRC Register
+
+/**************************************************************************
+    ACCELEROMETER FIFO CONTROL REGISTER DESCRIPTION
+**************************************************************************/
+#define LIS3DHTR_REG_ACCEL_FIFO_CTRL_FIFO_MODE_BYPASS (0x00)
+#define LIS3DHTR_REG_ACCEL_FIFO_CTRL_FIFO_MODE_FIFO   (0x40)
+#define LIS3DHTR_REG_ACCEL_FIFO_CTRL_FIFO_MODE_STREAM (0x80)
+#define LIS3DHTR_REG_ACCEL_FIFO_CTRL_FIFO_MODE_STREAM_TO_FIFO (0xC0)
+
 bool lis3dhtr_is_present(void);
 void lis3dhtr_init(void);
 
-int16_t lis3dhtr_get_temperature(void);
-
-void lis3dhtr_get_acceleration(int16_t *x, int16_t *y, int16_t *z);
+void lis3dhtr_read(int16_t *x, int16_t *y, int16_t *z);
 
 #endif
