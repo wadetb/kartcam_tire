@@ -21,6 +21,19 @@ LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 #define LED3_NODE DT_NODELABEL(led3)
 
 //
+// TODO:
+// - For lis3dhtr and dps368, use threads with sleep loop to drain fifo at the expected time
+// + Make DPS368 use its FIFO to sleep longer, increase rate.
+// + Make sampling rate, accuracy, etc. configurable through a config structure
+// + Use the lis3dhtr interrupt to wake from Deep Sleep.
+// + Implement Deep Sleep for all the peripherals.
+// + Use Zephyr DTS to disable unwanted nRF units - extra SPI etc.
+// + Figure out how much RAM we actually have.
+// + Use the physical button for something
+// + Use the RTT console to emulate BLE commands
+//
+
+//
 // SPI example:
 //
 // https://academy.nordicsemi.com/courses/nrf-connect-sdk-intermediate/lessons/lesson-5-serial-peripheral-interface-spi/topic/zephyr-spi-api/

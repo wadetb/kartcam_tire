@@ -30,8 +30,9 @@ log = '''
 lines = log.strip().split('\n')
 packets = []
 for line in lines:
-    if 'PACKET:' in line:
-        packet_str = line.split('PACKET:')[1].strip()
+    line = line.lower()
+    if 'packet:' in line:
+        packet_str = line.split('packet:')[1].strip()
         packets.append(packet_str)
 
 data = np.empty((0, 3), dtype=np.float32)

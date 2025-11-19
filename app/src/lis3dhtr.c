@@ -17,7 +17,6 @@ const struct spi_dt_spec lis3dhtr = SPI_DT_SPEC_GET(LIS3DHTR_NODE, LIS3DHTR_OP);
 const struct gpio_dt_spec lis3dhtr_int = GPIO_DT_SPEC_GET(LIS3DHTR_NODE, int_gpios);
 
 struct gpio_callback lis3dhtr_gpio_cb;
-struct k_work lis3dhtr_fifo_work;
 
 #define SPI_BUF_SIZE (1 + 32 * 3 * sizeof(int16_t))
 
@@ -58,6 +57,39 @@ char str[2 * 3 * LOG_SIZE + 1];
 int32_t last_s = 0;
 uint32_t packet_len = 0;
 
+static uint32_t lis3dhtr_samples_per_sec()
+{
+    switch (rate)
+    {
+    case LIS3DHTR_REG_ACCEL_CTRL_REG1_AODR_1:
+        return 1;
+    case LIS3DHTR_REG_ACCEL_CTRL_REG1_AODR_10:
+        return 10;
+    case LIS3DHTR_REG_ACCEL_CTRL_REG1_AODR_25:
+        return 25;
+    case LIS3DHTR_REG_ACCEL_CTRL_REG1_AODR_50:
+        return 50;
+    case LIS3DHTR_REG_ACCEL_CTRL_REG1_AODR_100:
+        return 100;
+    case LIS3DHTR_REG_ACCEL_CTRL_REG1_AODR_200:
+        return 200;
+    case LIS3DHTR_REG_ACCEL_CTRL_REG1_AODR_400:
+        return 400;
+    case LIS3DHTR_REG_ACCEL_CTRL_REG1_AODR_1_6K:
+        return 1600;
+    case LIS3DHTR_REG_ACCEL_CTRL_REG1_AODR_5K:
+        return 5000;
+    default:
+        return 0;
+    }
+}
+
+static uint32_t lis3dhtr_fifo_fill_usec()
+{
+    uint32_t samples_per_sec = lis3dhtr_samples_per_sec();
+    return watermark * 1000000 / samples_per_sec;
+}
+
 static void lis3dhtr_add_sample(int16_t s)
 {
     s = s >> LOG_QUANITIZE;
@@ -97,13 +129,15 @@ static void lis3dhtr_flush_log()
     {
         snprintf(&str[i * 2], 3, "%02X", packet[i]);
     }
-    LOG_INF("PACKET: %s", str);
+    LOG_INF("packet: %s", str);
 
     log_count = 0;
 }
 
 static void lis3dhtr_read_fifo(int samples)
 {
+    // LOG_INF("lis3dhtr_read_fifo: samples=%d", samples);
+
     // Read mode, auto-increment - addr automatically wraps around after each sample
     tx_buf[0] = LIS3DHTR_REG_ACCEL_OUT_X_L | 0x80 | 0x40;
 
@@ -135,31 +169,36 @@ static void lis3dhtr_read_fifo(int samples)
     log_count += samples;
 }
 
-static void lis3dhtr_fifo_worker(struct k_work *work)
+static void lis3dhtr_thread_main(void *, void *, void *)
 {
-    ARG_UNUSED(work);
-
-    uint8_t fifo_src = spi_read_uint8(&lis3dhtr, LIS3DHTR_REG_ACCEL_FIFO_SRC);
-    uint8_t ovrn_fifo = fifo_src & 0x40;
-    // uint8_t wtm = fifo_src & 0x80;
-    // uint8_t empty = fifo_src & 0x20;
-    uint8_t fss = fifo_src & 0x1F;
-    // LOG_INF("FIFO_SRC: 0x%02x wtm=%x ovrn_fifo=%x empty=%x, fss=%x", fifo_src, wtm, ovrn_fifo, empty, fss);
-
-    if (ovrn_fifo)
+    while (1)
     {
-        LOG_WRN("FIFO overrun");
-    }
+        uint32_t fifo_fill_usec = lis3dhtr_fifo_fill_usec();
+        k_usleep(fifo_fill_usec);
+        // LOG_INF("fifo_samples_per_sec: %d", lis3dhtr_samples_per_sec());
+        // LOG_INF("fifo_fill_usec: %d", fifo_fill_usec);
 
-    if (fss > 0)
-    {
-        lis3dhtr_read_fifo(fss);
+        uint8_t fifo_src = spi_read_uint8(&lis3dhtr, LIS3DHTR_REG_ACCEL_FIFO_SRC);
+        uint8_t ovrn_fifo = fifo_src & 0x40;
+        uint8_t fss = fifo_src & 0x1F;
+        // uint8_t wtm = fifo_src & 0x80;
+        // uint8_t empty = fifo_src & 0x20;
+        // LOG_INF("FIFO_SRC: 0x%02x wtm=%x ovrn_fifo=%x empty=%x, fss=%x", fifo_src, wtm, ovrn_fifo, empty, fss);
 
-        // log_fifo("FIFO_X", fifo_x, fss);
-        // log_fifo("FIFO_Y", fifo_y, fss);
-        // log_fifo("FIFO_Z", fifo_z, fss);
+        if (ovrn_fifo)
+        {
+            LOG_WRN("fifo overrun");
+        }
+
+        if (fss > 0)
+        {
+            lis3dhtr_read_fifo(fss);
+        }
     }
 }
+
+K_THREAD_STACK_DEFINE(lis3dhtr_thread_stack, 1024);
+struct k_thread lis3dhtr_thread;
 
 static void lis3dhtr_int_handler(const struct device *port, struct gpio_callback *cb, uint32_t pins)
 {
@@ -171,8 +210,6 @@ static void lis3dhtr_int_handler(const struct device *port, struct gpio_callback
     (void)src;
 
     // LOG_INF("INT triggered by %x", src);
-
-    k_work_submit(&lis3dhtr_fifo_work);
 }
 
 void lis3dhtr_init(void)
@@ -180,13 +217,11 @@ void lis3dhtr_init(void)
     uint8_t id = spi_read_uint8(&lis3dhtr, LIS3DHTR_REG_ACCEL_WHO_AM_I);
     if (id != 0x33)
     {
-        LOG_ERR("LIS3DHTR not detected!");
+        LOG_ERR("device not detected!");
         return;
     }
 
     spi_read_uint8(&lis3dhtr, LIS3DHTR_REG_ACCEL_INT1_SRC); // Clear any pending interrupts
-
-    k_work_init(&lis3dhtr_fifo_work, lis3dhtr_fifo_worker);
 
     gpio_pin_configure_dt(&lis3dhtr_int, GPIO_INPUT);
     gpio_pin_interrupt_configure_dt(&lis3dhtr_int, GPIO_INT_EDGE_TO_ACTIVE);
@@ -199,7 +234,7 @@ void lis3dhtr_init(void)
                       LIS3DHTR_REG_ACCEL_CTRL_REG1_AYEN_ENABLE |
                       LIS3DHTR_REG_ACCEL_CTRL_REG1_AXEN_ENABLE;
     uint8_t config2 = 0;
-    uint8_t config3 = LIS3DHTR_CTRL_REG3_WTM_ENABLE;
+    uint8_t config3 = 0;
     uint8_t config4 = LIS3DHTR_REG_ACCEL_CTRL_REG4_FS_2G |
                       LIS3DHTR_REG_ACCEL_CTRL_REG4_HS_ENABLE;
     uint8_t config5 = LIS3DHTR_REG_ACCEL_CTRL_REG5_FIFO_ENABLE;
@@ -213,15 +248,24 @@ void lis3dhtr_init(void)
     spi_write_uint8(&lis3dhtr, LIS3DHTR_REG_ACCEL_FIFO_CTRL, fifoctrl);
 
     lis3dhtr_read_fifo(32);
+
+    k_thread_create(&lis3dhtr_thread, lis3dhtr_thread_stack,
+                                 K_THREAD_STACK_SIZEOF(lis3dhtr_thread_stack),
+                                 lis3dhtr_thread_main,
+                                 NULL, NULL, NULL,
+                                 7, 0, K_NO_WAIT);
+
+    LOG_INF("initialized");
 }
 
 void lis3dhtr_read(int16_t *x, int16_t *y, int16_t *z)
 {
     // LOG_INF("log_count: %d", log_count);
     // int n = log_count < 10 ? log_count : 10;
-    // log_fifo("LOG_X", log_x + log_count - n, n);
-    // log_fifo("LOG_Y", log_y + log_count - n, n);
-    // log_fifo("LOG_Z", log_z + log_count - n, n);
+    // log_fifo("log_x", log_x + log_count - n, n);
+    // log_fifo("log_y", log_y + log_count - n, n);
+    // log_fifo("log_z", log_z + log_count - n, n);
+
     if (log_count == 0)
     {
         *x = 0;
