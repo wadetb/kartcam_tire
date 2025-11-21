@@ -98,6 +98,6 @@
 
 bool dps368_is_present(void);
 void dps368_init(void);
-void dps368_read(float *temperature, float *pressure);
+void dps368_latest(float *temperature, float *pressure);
 
 #endif

@@ -201,6 +201,6 @@
 bool lis3dhtr_is_present(void);
 void lis3dhtr_init(void);
 
-void lis3dhtr_read(int16_t *x, int16_t *y, int16_t *z);
+void lis3dhtr_latest(int16_t *x, int16_t *y, int16_t *z);
 
 #endif

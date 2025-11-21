@@ -22,15 +22,18 @@ LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 
 //
 // TODO:
-// - For lis3dhtr and dps368, use threads with sleep loop to drain fifo at the expected time
-// + Make DPS368 use its FIFO to sleep longer, increase rate.
-// + Make sampling rate, accuracy, etc. configurable through a config structure
+// + Use the RTT console to emulate BLE commands
+// + Make sampling rate, accuracy, etc. configurable through a command syntax
+// + Use "at least" values as input and map to hardware.
+// + Refactor packet recording code into a common module
+// + Add huffman compression with static dictionaries
+// + Test different quantization for temperature and pressure - instead of min / max just use step size
+// + Follow Micropython framing format with timestamps, etc.
 // + Use the lis3dhtr interrupt to wake from Deep Sleep.
 // + Implement Deep Sleep for all the peripherals.
 // + Use Zephyr DTS to disable unwanted nRF units - extra SPI etc.
-// + Figure out how much RAM we actually have.
+// + Figure out how much RAM we actually have and implement that in the device tree.
 // + Use the physical button for something
-// + Use the RTT console to emulate BLE commands
 //
 
 //
@@ -270,12 +273,12 @@ int main(void)
 		if (n % 4 == 2) gpio_pin_toggle_dt(&led2);
 		if (n % 4 == 3) gpio_pin_toggle_dt(&led3);
 
-		int16_t dx, dy, dz;
-		lis3dhtr_read(&dx, &dy, &dz);
+		// int16_t dx, dy, dz;
+		// lis3dhtr_latest(&dx, &dy, &dz);
 		// LOG_INF("LIS3DHTR Accel X: %d Y: %d Z: %d", dx, dy, dz);
 
 		// float temp, pressure;
-		// dps368_read(&temp, &pressure);
+		// dps368_latest(&temp, &pressure);
 		// float temp_f = temp * 9.0f/5.0f + 32.0f;
 		// LOG_INF("DPS368 Temp: %f C (%f F) Pressure: %f", (double)temp, (double)temp_f, (double)pressure);
 

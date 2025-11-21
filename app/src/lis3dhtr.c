@@ -129,7 +129,7 @@ static void lis3dhtr_flush_log()
     {
         snprintf(&str[i * 2], 3, "%02X", packet[i]);
     }
-    LOG_INF("packet: %s", str);
+    LOG_INF("accel packet: %s", str);
 
     log_count = 0;
 }
@@ -258,7 +258,7 @@ void lis3dhtr_init(void)
     LOG_INF("initialized");
 }
 
-void lis3dhtr_read(int16_t *x, int16_t *y, int16_t *z)
+void lis3dhtr_latest(int16_t *x, int16_t *y, int16_t *z)
 {
     // LOG_INF("log_count: %d", log_count);
     // int n = log_count < 10 ? log_count : 10;
