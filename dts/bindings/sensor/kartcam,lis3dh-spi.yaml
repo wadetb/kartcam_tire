@@ -1,7 +1,7 @@
 description: |
-  KartCam LIS3DHTR binding
+  KartCam LIS3DH binding
 
-compatible: "kartcam,lis3dhtr-spi"
+compatible: "kartcam,lis3dh-spi"
 
 include:
   - name: spi-device.yaml

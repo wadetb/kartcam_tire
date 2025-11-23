@@ -71,9 +71,9 @@ char str[2 * PACKET_SIZE + 1];
 
 void finish_packet()
 {
-    for (uint32_t i = 0; i < packet_len; i++)
-        snprintf(&str[i * 2], 3, "%02X", packet[i]);
-    LOG_INF("%s %lld %d %f %s", packet_type, packet_timestamp, packet_rate, (double)packet_step, str);
+    // for (uint32_t i = 0; i < packet_len; i++)
+    //     snprintf(&str[i * 2], 3, "%02X", packet[i]);
+    // LOG_INF("%s %lld %d %f %s", packet_type, packet_timestamp, packet_rate, (double)packet_step, str);
 }
 
 uint64_t timestamp()

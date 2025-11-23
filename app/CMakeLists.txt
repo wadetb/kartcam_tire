@@ -3,4 +3,4 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
 project(app LANGUAGES C)
 
-target_sources(app PRIVATE src/main.c src/packet.c src/dps368.c src/lis3dhtr.c)
+target_sources(app PRIVATE src/main.c src/packet.c src/spi.c src/dps368.c src/lis3dh.c)
