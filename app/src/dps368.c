@@ -1,10 +1,6 @@
-#include <zephyr/kernel.h>
-#include <zephyr/device.h>
-#include <zephyr/drivers/spi.h>
-#include <zephyr/logging/log.h>
+#include "common.h"
 
 #include "dps368.h"
-#include "common.h"
 
 extern struct spi_dt_spec dps368;
 
@@ -22,13 +18,15 @@ float c21;
 
 const float scaling_facts[] = {524288.0f, 1572864.0f, 3670016.0f, 7864320.0f, 253952.0f, 516096.0f, 1040384.0f, 2088960.0f};
 
-uint32_t tmp_osr = DPS368_REG_TMP_CFG_PRC_4;
-uint32_t prs_osr = DPS368_REG_PRS_CFG_PRC_4;
+uint32_t tmp_osr = DPS368_REG_TMP_CFG_PRC_1;
+uint32_t prs_osr = DPS368_REG_TMP_CFG_PRC_1;
 
-uint8_t prs_rate = DPS368_REG_TMP_CFG_RATE_128;
-uint8_t tmp_rate = DPS368_REG_TMP_CFG_RATE_128;
-uint8_t prs_watermark = 30;
-uint8_t tmp_watermark = 30;
+uint8_t prs_rate = DPS368_REG_PRS_CFG_RATE_64;
+uint8_t tmp_rate = DPS368_REG_TMP_CFG_RATE_8;
+uint8_t prs_tmp_watermark = 30;
+
+float tmp_step = 0.001f; // degrees C
+float prs_step = 0.01f;  // Pa
 
 int32_t tmp_raw;
 int32_t prs_raw;
@@ -37,7 +35,7 @@ float prs_sc;
 float tmp_comp;
 float prs_comp;
 
-#define LOG_SIZE 10
+#define LOG_SIZE 40
 
 int log_prs_count;
 int log_tmp_count;
@@ -70,13 +68,6 @@ static uint32_t dps368_samples_per_sec(uint8_t rate)
     }
 }
 
-static uint32_t dps368_sleep_usec(uint8_t rate, uint8_t watermark)
-{
-    uint32_t samples_per_sec = dps368_samples_per_sec(rate);
-    // LOG_INF("samples_per_sec: %d", samples_per_sec);
-    return watermark * 1000000 / samples_per_sec;
-}
-
 static int32_t twoc(uint32_t value, uint8_t bits)
 {
     if (value & (1u << (bits - 1)))
@@ -84,103 +75,6 @@ static int32_t twoc(uint32_t value, uint8_t bits)
         value = value - (1u << bits);
     }
     return (int32_t)value;
-}
-
-static uint8_t packet[3 * LOG_SIZE];
-static char str[2 * 3 * LOG_SIZE + 1];
-
-static int32_t last_s = 0;
-static uint32_t packet_len = 0;
-
-static void lis3dhtr_add_packet(int32_t s)
-{
-    int32_t d = s - last_s;
-
-    if (d >= 127 || d < -128)
-    {
-        uint32_t us = (uint32_t)(s + 32768); // make unsigned for transmission
-        packet[packet_len++] = 0xff;
-        packet[packet_len++] = (us >> 8) & 0xff;
-        packet[packet_len++] = us & 0xff;
-    }
-    else
-    {
-        packet[packet_len++] = (uint8_t)(d + 128);
-    }
-
-    last_s = s;
-}
-
-float tmp_min = 10.0f; // 50F
-float tmp_max = 100.0f; // 212F
-uint32_t tmp_prec = 1 << 10;
-
-float prs_min = 70000.0f; // ~10psi absolute
-float prs_max = 1050000.0f; // ~150psi absolute
-uint32_t prs_prec = 1 << 15;
-
-uint32_t quantf(float v, float mn, float mx, uint32_t prec)
-{
-    if (v < mn)
-        return 0;
-    if (v > mx)
-        return prec;
-    float u = (v - mn) / (mx - mn);
-    uint32_t r = u * prec;
-    return r;
-}
-
-static void dps368_log_tmp()
-{
-    // LOG_INF("tmp: %f", (double)tmp_comp);
-
-    log_tmp[log_tmp_count] = tmp_comp;
-    log_tmp_count++;
-
-    if (log_tmp_count >= LOG_SIZE)
-    {
-        // LOG_INF("flushing temperature log at %d", log_tmp_count);
-
-        packet_len = 0;
-        last_s = 0;
-
-        for (int i = 0; i < log_tmp_count; i++)
-        {
-            uint32_t q = quantf(log_tmp[i], tmp_min, tmp_max, tmp_prec);
-            lis3dhtr_add_packet(q);
-        }
-
-        for (int i = 0; i < packet_len; i++)
-            snprintf(&str[i * 2], 3, "%02X", packet[i]);
-        LOG_INF("tmp packet: %s", str);
-
-        log_tmp_count = 0;
-    }
-}
-
-static void dps368_log_prs()
-{
-    // LOG_INF("prs: %f", (double)prs_comp);
-
-    log_prs[log_prs_count] = prs_comp;
-    log_prs_count++;
-
-    if (log_prs_count >= LOG_SIZE)
-    {
-        // LOG_INF("flushing pressure log at %d", log_prs_count);
-
-        for (int i = 0; i < log_prs_count; i++)
-        {
-            uint32_t q = quantf(log_prs[i], prs_min, prs_max, prs_prec);
-            lis3dhtr_add_packet(q);
-        }
-
-        for (int i = 0; i < packet_len; i++)
-            snprintf(&str[i * 2], 3, "%02X", packet[i]);
-        LOG_INF("prs packet: %s", str);
-
-        log_prs_count = 0;
-    }
 }
 
 static void dps368_poll()
@@ -223,7 +117,8 @@ static void dps368_poll()
             prs_comp = c00 + prs_sc * (c10 + prs_sc * (c20 + prs_sc * c30)) +
                        tmp_sc * (c01 + prs_sc * (c11 + prs_sc * c21));
             // LOG_INF("prs_raw: %x prs_sc: %f prs_comp: %f", prs_raw, (double)prs_sc, (double)prs_comp);
-            dps368_log_prs();
+            log_prs[log_prs_count] = prs_comp;
+            log_prs_count++;
         }
         else
         {
@@ -231,8 +126,40 @@ static void dps368_poll()
             tmp_sc = (float)tmp_raw / scaling_facts[tmp_osr];
             tmp_comp = c0Half + c1 * tmp_sc;
             // LOG_INF("tmp_raw: %x tmp_sc: %f tmp_comp: %f", tmp_raw, (double)tmp_sc, (double)tmp_comp);
-            dps368_log_tmp();
+            log_tmp[log_tmp_count] = tmp_comp;
+            log_tmp_count++;
         }
+    }
+
+    uint64_t log_timestamp = timestamp();
+
+    if (log_prs_count > 0)
+    {
+        // LOG_INF("flushing pressure log at %d", log_prs_count);
+        
+        uint32_t prs_samples_per_sec = dps368_samples_per_sec(prs_rate);
+        if (start_packet("dps368.hpa", log_timestamp, prs_samples_per_sec, prs_step))
+        {
+            for (int i = 0; i < log_prs_count; i++)
+                add_packet_sample(log_prs[i]);
+            finish_packet();
+        }
+
+        log_prs_count = 0;
+    }
+
+    if (log_tmp_count > 0)
+    {
+        // LOG_INF("flushing temperature log at %d", log_tmp_count);
+        uint32_t tmp_samples_per_sec = dps368_samples_per_sec(tmp_rate);
+        if (start_packet("dps368.temp", log_timestamp, tmp_samples_per_sec, tmp_step))
+        {
+            for (int i = 0; i < log_tmp_count; i++)
+                add_packet_sample(log_tmp[i]);
+            finish_packet();
+        }
+        
+        log_tmp_count = 0;
     }
 }
 
@@ -243,11 +170,10 @@ static void dps368_thread_main(void *, void *, void *)
 {
     while (1)
     {
-        uint8_t rate = tmp_rate > prs_rate ? tmp_rate : prs_rate;
-        uint8_t watermark = tmp_rate > prs_rate ? tmp_watermark : prs_watermark;
-        uint32_t sleep_usec = dps368_sleep_usec(rate, watermark);
+        uint32_t prs_samples_per_sec = dps368_samples_per_sec(prs_rate);
+        uint32_t tmp_samples_per_sec = dps368_samples_per_sec(tmp_rate);
+        uint32_t sleep_usec = prs_tmp_watermark * 1000000 / (prs_samples_per_sec + tmp_samples_per_sec);
         // LOG_INF("sleep_usec: %d", sleep_usec);
-
         k_usleep(sleep_usec);
 
         dps368_poll();

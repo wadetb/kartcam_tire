@@ -96,7 +96,6 @@
 #define DPS368_REG_TMP_COEF_SRCE_TEMP_SENSOR_EXTERNAL (0x80)
 #define DPS368_REG_TMP_COEF_SRCE_TEMP_SENSOR_INTERNAL (0x00)
 
-bool dps368_is_present(void);
 void dps368_init(void);
 void dps368_latest(float *temperature, float *pressure);
 

@@ -91,63 +91,62 @@
 #define LIS3DHTR_REG_ACCEL_CTRL_REG1_AXEN_DISABLE (0x00) // Acceleration X-Axis Disabled
 #define LIS3DHTR_REG_ACCEL_CTRL_REG1_AXEN_ENABLE (0x01)  // Acceleration X-Axis Enabled
 
-
 /**************************************************************************
     ACCELEROMETER CONTROL REGISTER 2 DESCRIPTION
 **************************************************************************/
-#define LIS3DHTR_CTRL_REG2_HPM_MASK (0xC0)       // HPM
-#define LIS3DHTR_CTRL_REG2_HPM_NORMAL (0x00) // Normal mode
-#define LIS3DHTR_CTRL_REG2_HPM_REF (0x40) // Reference signal for filtering
-#define LIS3DHTR_CTRL_REG2_HPM_NORMAL1 (0x80) // Normal mode
+#define LIS3DHTR_CTRL_REG2_HPM_MASK (0xC0)      // HPM
+#define LIS3DHTR_CTRL_REG2_HPM_NORMAL (0x00)    // Normal mode
+#define LIS3DHTR_CTRL_REG2_HPM_REF (0x40)       // Reference signal for filtering
+#define LIS3DHTR_CTRL_REG2_HPM_NORMAL1 (0x80)   // Normal mode
 #define LIS3DHTR_CTRL_REG2_HPM_AUTORESET (0xC0) // Autoreset on interrupt event
 
 #define LIS3DHTR_CTRL_REG2_HPCF_MASK (0x30) // HPCF
 #define LIS3DHTR_CTRL_REG2_HPCF_NONE (0x00) // NONE
 
-#define LIS3DHTR_CTRL_REG2_FDS_MASK (0x08) // Filtered data selection
+#define LIS3DHTR_CTRL_REG2_FDS_MASK (0x08)    // Filtered data selection
 #define LIS3DHTR_CTRL_REG2_FDS_DISABLE (0x00) // filter disable
-#define LIS3DHTR_CTRL_REG2_FDS_ENABLE (0x08) // filter enable
+#define LIS3DHTR_CTRL_REG2_FDS_ENABLE (0x08)  // filter enable
 
-#define LIS3DHTR_CTRL_REG2_HPCLICK_MASK (0x04) // High-pass filter enabled for CLICK function.
+#define LIS3DHTR_CTRL_REG2_HPCLICK_MASK (0x04)    // High-pass filter enabled for CLICK function.
 #define LIS3DHTR_CTRL_REG2_HPCLICK_DISABLE (0x00) // filter disable
-#define LIS3DHTR_CTRL_REG2_HPCLICK_ENABLE (0x04) // filter enable
+#define LIS3DHTR_CTRL_REG2_HPCLICK_ENABLE (0x04)  // filter enable
 
-#define LIS3DHTR_CTRL_REG2_HP_IA2_MASK (0x02) // High-pass filter enabled for AOI function on interrupt 2
+#define LIS3DHTR_CTRL_REG2_HP_IA2_MASK (0x02)    // High-pass filter enabled for AOI function on interrupt 2
 #define LIS3DHTR_CTRL_REG2_HP_IA2_DISABLE (0x00) // filter disable
-#define LIS3DHTR_CTRL_REG2_HP_IA2_ENABLE (0x02) 
+#define LIS3DHTR_CTRL_REG2_HP_IA2_ENABLE (0x02)
 
-#define LIS3DHTR_CTRL_REG2_HP_IA1_MASK (0x01) // High-pass filter enabled for AOI function on interrupt 1
+#define LIS3DHTR_CTRL_REG2_HP_IA1_MASK (0x01)    // High-pass filter enabled for AOI function on interrupt 1
 #define LIS3DHTR_CTRL_REG2_HP_IA1_DISABLE (0x00) // filter disable
 #define LIS3DHTR_CTRL_REG2_HP_IA1_ENABLE (0x01)  // filter enable
 
 /**************************************************************************
     ACCELEROMETER CONTROL REGISTER 3 DESCRIPTION
 **************************************************************************/
-#define LIS3DHTR_CTRL_REG3_CLICK_MASK (0x80)       // Click interrupt on INT1
+#define LIS3DHTR_CTRL_REG3_CLICK_MASK (0x80)    // Click interrupt on INT1
 #define LIS3DHTR_CTRL_REG3_CLICK_DISABLE (0x00) // disable
 #define LIS3DHTR_CTRL_REG3_CLICK_ENABLE (0x80)  // enable
 
-#define LIS3DHTR_CTRL_REG3_IA1_MASK (0x40)       //  IA1 interrupt on INT1
+#define LIS3DHTR_CTRL_REG3_IA1_MASK (0x40)    //  IA1 interrupt on INT1
 #define LIS3DHTR_CTRL_REG3_IA1_DISABLE (0x00) // disable
 #define LIS3DHTR_CTRL_REG3_IA1_ENABLE (0x40)  // enable
 
-#define LIS3DHTR_CTRL_REG3_IA2_MASK (0x20)       //  IA2 interrupt on INT1
+#define LIS3DHTR_CTRL_REG3_IA2_MASK (0x20)    //  IA2 interrupt on INT1
 #define LIS3DHTR_CTRL_REG3_IA2_DISABLE (0x00) // disable
 #define LIS3DHTR_CTRL_REG3_IA2_ENABLE (0x20)  // enable
 
-#define LIS3DHTR_CTRL_REG3_ZXYDA_MASK (0x10)       // ZYXDA interrupt on INT1
+#define LIS3DHTR_CTRL_REG3_ZXYDA_MASK (0x10)    // ZYXDA interrupt on INT1
 #define LIS3DHTR_CTRL_REG3_ZXYDA_DISABLE (0x00) // disable
 #define LIS3DHTR_CTRL_REG3_ZXYDA_ENABLE (0x10)  // enable
 
-#define LIS3DHTR_CTRL_REG3_321DA_MASK (0x08)       //  321DA interrupt on INT1
+#define LIS3DHTR_CTRL_REG3_321DA_MASK (0x08)    //  321DA interrupt on INT1
 #define LIS3DHTR_CTRL_REG3_321DA_DISABLE (0x00) // disable
 #define LIS3DHTR_CTRL_REG3_321DA_ENABLE (0x08)  // enable
 
-#define LIS3DHTR_CTRL_REG3_WTM_MASK (0x04)       //  FIFO watermark interrupt on INT1
+#define LIS3DHTR_CTRL_REG3_WTM_MASK (0x04)    //  FIFO watermark interrupt on INT1
 #define LIS3DHTR_CTRL_REG3_WTM_DISABLE (0x00) // disable
 #define LIS3DHTR_CTRL_REG3_WTM_ENABLE (0x04)  // enable
 
-#define LIS3DHTR_CTRL_REG3_OVERRUN_MASK (0x02)       //  FIFO overrun interrupt on INT1
+#define LIS3DHTR_CTRL_REG3_OVERRUN_MASK (0x02)    //  FIFO overrun interrupt on INT1
 #define LIS3DHTR_CTRL_REG3_OVERRUN_DISABLE (0x00) // disable
 #define LIS3DHTR_CTRL_REG3_OVERRUN_ENABLE (0x02)  // enable
 
@@ -181,24 +180,52 @@
 #define LIS3DHTR_REG_ACCEL_CTRL_REG4_SIM_4WIRE (0x00) // 4-Wire Interface
 #define LIS3DHTR_REG_ACCEL_CTRL_REG4_SIM_3WIRE (0x01) // 3-Wire Interface
 
-#define LIS3DHTR_REG_ACCEL_STATUS2_UPDATE_MASK (0x08)   // Has New Data Flag Mask
+#define LIS3DHTR_REG_ACCEL_STATUS2_UPDATE_MASK (0x08) // Has New Data Flag Mask
 
 /**************************************************************************
     ACCELEROMETER CONTROL REGISTER 5 DESCRIPTION
 **************************************************************************/
-#define LIS3DHTR_REG_ACCEL_CTRL_REG5_BOOT        (0x80)  // Reboot memory content
-#define LIS3DHTR_REG_ACCEL_CTRL_REG5_FIFO_ENABLE (0x40)  // FIFO Enable
-#define LIS3DHTR_REG_ACCEL_CTRL_REG5_LIR_INT1    (0x20) // Latch Interrupt Request on INT1_SRC Register
+#define LIS3DHTR_REG_ACCEL_CTRL_REG5_BOOT (0x80)        // Reboot memory content
+#define LIS3DHTR_REG_ACCEL_CTRL_REG5_FIFO_ENABLE (0x40) // FIFO Enable
+#define LIS3DHTR_REG_ACCEL_CTRL_REG5_LIR_INT1 (0x20)    // Latch Interrupt Request on INT1_SRC Register
 
 /**************************************************************************
     ACCELEROMETER FIFO CONTROL REGISTER DESCRIPTION
 **************************************************************************/
 #define LIS3DHTR_REG_ACCEL_FIFO_CTRL_FIFO_MODE_BYPASS (0x00)
-#define LIS3DHTR_REG_ACCEL_FIFO_CTRL_FIFO_MODE_FIFO   (0x40)
+#define LIS3DHTR_REG_ACCEL_FIFO_CTRL_FIFO_MODE_FIFO (0x40)
 #define LIS3DHTR_REG_ACCEL_FIFO_CTRL_FIFO_MODE_STREAM (0x80)
 #define LIS3DHTR_REG_ACCEL_FIFO_CTRL_FIFO_MODE_STREAM_TO_FIFO (0xC0)
 
-bool lis3dhtr_is_present(void);
+enum lis3dh_rate
+{
+    LIS3DH_RATE_0_HZ, // Power-down mode
+    LIS3DH_RATE_1_HZ,
+    LIS3DH_RATE_10_HZ,
+    LIS3DH_RATE_25_HZ,
+    LIS3DH_RATE_50_HZ,
+    LIS3DH_RATE_100_HZ,
+    LIS3DH_RATE_200_HZ,
+    LIS3DH_RATE_400_HZ,
+    LIS3DH_RATE_1_6_KHZ,
+    LIS3DH_RATE_5_KHZ
+};
+
+enum lis3dh_mode
+{
+    LIS3DH_MODE_LOW_POWER,
+    LIS3DH_MODE_NORMAL,
+    LIS3DH_MODE_HIGH_RES
+};
+
+enum lis3dh_scale
+{
+    LIS3DH_SCALE_2G,
+    LIS3DH_SCALE_4G,
+    LIS3DH_SCALE_8G,
+    LIS3DH_SCALE_16G
+};
+
 void lis3dhtr_init(void);
 
 void lis3dhtr_latest(int16_t *x, int16_t *y, int16_t *z);

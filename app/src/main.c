@@ -24,11 +24,13 @@ LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 // TODO:
 // + Use the RTT console to emulate BLE commands
 // + Make sampling rate, accuracy, etc. configurable through a command syntax
+// + Save settings to NVM
 // + Use "at least" values as input and map to hardware.
-// + Refactor packet recording code into a common module
+// + Refactor packet recording code into a common "channel" module
 // + Add huffman compression with static dictionaries
 // + Test different quantization for temperature and pressure - instead of min / max just use step size
 // + Follow Micropython framing format with timestamps, etc.
+// + Split accel into 3 separate "channels" so they can be toggled independently
 // + Use the lis3dhtr interrupt to wake from Deep Sleep.
 // + Implement Deep Sleep for all the peripherals.
 // + Use Zephyr DTS to disable unwanted nRF units - extra SPI etc.
