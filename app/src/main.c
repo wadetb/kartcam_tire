@@ -27,7 +27,8 @@ LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 // + Use "at least" values as input and map to hardware.
 // + Refactor packet recording code into a common "channel" module
 // + Add huffman compression with static dictionaries
-// + Test different quantization for temperature and pressure - instead of min / max just use step size
+// + Test different quantization for temperature and pressure - instead of min / max just use step
+// size
 // + Follow Micropython framing format with timestamps, etc.
 // + Split accel into 3 separate "channels" so they can be toggled independently
 // + Use the lis3dhtr interrupt to wake from Deep Sleep.
@@ -43,7 +44,7 @@ LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 // https://academy.nordicsemi.com/courses/nrf-connect-sdk-intermediate/lessons/lesson-5-serial-peripheral-interface-spi/topic/zephyr-spi-api/
 //
 
-#define SPI_NODE DT_NODELABEL(spi0)
+#define SPI_NODE  DT_NODELABEL(spi0)
 
 static const struct gpio_dt_spec led0 = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 static const struct gpio_dt_spec led1 = GPIO_DT_SPEC_GET(LED1_NODE, gpios);
@@ -53,10 +54,10 @@ static const struct gpio_dt_spec led3 = GPIO_DT_SPEC_GET(LED3_NODE, gpios);
 static const struct device *spi_dev = DEVICE_DT_GET(SPI_NODE);
 
 // /* NUS-like UUIDs (Nordic UART Service) */
-// #define BT_UUID_NUS_SERVICE_VAL BT_UUID_128_ENCODE(0x6E400001,0xB5A3,0xF393,0xE0A9,0xE50E24DCCA9E)
-// #define BT_UUID_NUS_RX_VAL      BT_UUID_128_ENCODE(0x6E400002,0xB5A3,0xF393,0xE0A9,0xE50E24DCCA9E)
-// #define BT_UUID_NUS_TX_VAL      BT_UUID_128_ENCODE(0x6E400003,0xB5A3,0xF393,0xE0A9,0xE50E24DCCA9E)
-
+// #define BT_UUID_NUS_SERVICE_VAL
+// BT_UUID_128_ENCODE(0x6E400001,0xB5A3,0xF393,0xE0A9,0xE50E24DCCA9E) #define BT_UUID_NUS_RX_VAL
+// BT_UUID_128_ENCODE(0x6E400002,0xB5A3,0xF393,0xE0A9,0xE50E24DCCA9E) #define BT_UUID_NUS_TX_VAL
+// BT_UUID_128_ENCODE(0x6E400003,0xB5A3,0xF393,0xE0A9,0xE50E24DCCA9E)
 
 // static struct bt_uuid_128 nus_uuid     = BT_UUID_INIT_128(BT_UUID_NUS_SERVICE_VAL);
 // static struct bt_uuid_128 nus_rx_uuid  = BT_UUID_INIT_128(BT_UUID_NUS_RX_VAL);
@@ -85,8 +86,8 @@ static const struct device *spi_dev = DEVICE_DT_GET(SPI_NODE);
 // BT_GATT_SERVICE_DEFINE(nus_svc,
 // 	BT_GATT_PRIMARY_SERVICE(&nus_uuid),
 // 	/* TX characteristic: notify to central */
-// 	BT_GATT_CHARACTERISTIC(&nus_tx_uuid.uuid, BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_NONE, NULL, NULL, NULL),
-// 	BT_GATT_CCC(tx_ccc_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+// 	BT_GATT_CHARACTERISTIC(&nus_tx_uuid.uuid, BT_GATT_CHRC_NOTIFY, BT_GATT_PERM_NONE, NULL,
+// NULL, NULL), 	BT_GATT_CCC(tx_ccc_cfg_changed, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 // 	/* RX characteristic: central writes here */
 // 	BT_GATT_CHARACTERISTIC(&nus_rx_uuid.uuid, BT_GATT_CHRC_WRITE_WITHOUT_RESP,
 // 			       BT_GATT_PERM_WRITE, NULL, rx_write_cb, NULL)
@@ -140,22 +141,20 @@ static const struct device *spi_dev = DEVICE_DT_GET(SPI_NODE);
 // 			801, /* Max Advertising Interval 500.625ms (801*0.625ms) */
 // 			NULL); /* Set to NULL for undirected advertising */
 
-int cmd_table_lookup(const struct shell *shell, const char **table, size_t table_size, const char *value)
+int cmd_table_lookup(const struct shell *shell, const char **table, size_t table_size,
+		     const char *value)
 {
-    for (size_t i = 0; i < table_size; i++)
-    {
-        if (strcmp(table[i], value) == 0)
-        {
-            return (int)i;
-        }
-    }
-    shell_fprintf(shell, SHELL_ERROR, "Invalid argument value: %s\n", value);
-    shell_fprintf(shell, SHELL_ERROR, "Valid options are:\n");
-    for (size_t i = 0; i < table_size; i++)
-    {
-        shell_fprintf(shell, SHELL_ERROR, " %s\n", table[i]);
-    }
-    return -1;
+	for (size_t i = 0; i < table_size; i++) {
+		if (strcmp(table[i], value) == 0) {
+			return (int)i;
+		}
+	}
+	shell_fprintf(shell, SHELL_ERROR, "Invalid argument value: %s\n", value);
+	shell_fprintf(shell, SHELL_ERROR, "Valid options are:\n");
+	for (size_t i = 0; i < table_size; i++) {
+		shell_fprintf(shell, SHELL_ERROR, " %s\n", table[i]);
+	}
+	return -1;
 }
 
 int main(void)
@@ -188,7 +187,7 @@ int main(void)
 	// {
 	// 	k_msleep(100);
 	// }
-	
+
 	// /* Advertise: connectable + UUID in scan response */
 	// const struct bt_data ad[] = {
 	// 	BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
@@ -204,7 +203,7 @@ int main(void)
 	// }
 	// LOG_INF("Advertising 'KartCam Tire'");
 
-	if(!device_is_ready(spi_dev)) {
+	if (!device_is_ready(spi_dev)) {
 		LOG_WRN("SPI master device not ready!\n");
 	}
 
@@ -216,19 +215,33 @@ int main(void)
 	while (1) {
 		// read rtt console for commands to start/stop logging, set rates, etc.
 
-
-
-		if (n % 4 == 0) gpio_pin_toggle_dt(&led0);
-		if (n % 4 == 1) gpio_pin_toggle_dt(&led1);
-		if (n % 4 == 2) gpio_pin_toggle_dt(&led2);
-		if (n % 4 == 3) gpio_pin_toggle_dt(&led3);
+		if (n % 4 == 0) {
+			gpio_pin_toggle_dt(&led0);
+		}
+		if (n % 4 == 1) {
+			gpio_pin_toggle_dt(&led1);
+		}
+		if (n % 4 == 2) {
+			gpio_pin_toggle_dt(&led2);
+		}
+		if (n % 4 == 3) {
+			gpio_pin_toggle_dt(&led3);
+		}
 
 		k_msleep(1000);
 
-		if (n % 4 == 0) gpio_pin_toggle_dt(&led0);
-		if (n % 4 == 1) gpio_pin_toggle_dt(&led1);
-		if (n % 4 == 2) gpio_pin_toggle_dt(&led2);
-		if (n % 4 == 3) gpio_pin_toggle_dt(&led3);
+		if (n % 4 == 0) {
+			gpio_pin_toggle_dt(&led0);
+		}
+		if (n % 4 == 1) {
+			gpio_pin_toggle_dt(&led1);
+		}
+		if (n % 4 == 2) {
+			gpio_pin_toggle_dt(&led2);
+		}
+		if (n % 4 == 3) {
+			gpio_pin_toggle_dt(&led3);
+		}
 
 		n++;
 	}
