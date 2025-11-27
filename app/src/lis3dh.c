@@ -11,13 +11,19 @@ LOG_MODULE_REGISTER(lis3dh);
 #define LIS3DH_REG_CTRL_REG1_XEN       BIT(0)
 
 #define LIS3DH_REG_CTRL_REG2           0x21
+
 #define LIS3DH_REG_CTRL_REG3           0x22
+#define LIS3DH_REG_CTRL_REG3_I1_IA1    BIT(6)
 
 #define LIS3DH_REG_CTRL_REG4           0x23
 #define LIS3DH_REG_CTRL_REG4_HR        BIT(3)
 
 #define LIS3DH_REG_CTRL_REG5           0x24
 #define LIS3DH_REG_CTRL_REG5_FIFO_EN   BIT(6)
+
+#define LIS3DH_REG_CTRL_REG6           0x25
+#define LIS3DH_REG_REFERENCE           0x26
+#define LIS3DH_REG_STATUS_REG          0x27
 
 #define LIS3DH_REG_OUT_X_L             0x28
 
@@ -26,7 +32,18 @@ LOG_MODULE_REGISTER(lis3dh);
 #define LIS3DH_REG_FIFO_CTRL_FM_FIFO   BIT(6)
 
 #define LIS3DH_REG_FIFO_SRC            0x2F
+
+#define LIS3DH_REG_INT1_CFG            0x30
+#define LIS3DH_REG_INT1_CFG_ZHIE       BIT(5)
+#define LIS3DH_REG_INT1_CFG_ZLIE       BIT(4)
+#define LIS3DH_REG_INT1_CFG_YHIE       BIT(3)
+#define LIS3DH_REG_INT1_CFG_YLIE       BIT(2)
+#define LIS3DH_REG_INT1_CFG_XHIE       BIT(1)
+#define LIS3DH_REG_INT1_CFG_XLIE       BIT(0)
+
 #define LIS3DH_REG_INT1_SRC            0x31
+#define LIS3DH_REG_INT1_THS            0x32
+#define LIS3DH_REG_INT1_DURATION       0x33
 
 enum lis3dh_rate {
 	LIS3DH_RATE_0_HZ, // Power-down mode
@@ -70,6 +87,13 @@ enum lis3dh_rate lis3dh_rate = LIS3DH_RATE_100_HZ;
 enum quantize lis3dh_quant = QUANTIZE_0_1;
 uint8_t lis3dh_watermark = 30;
 
+uint16_t lis3dh_z_wakeup_thr = 1200;
+uint16_t lis3dh_z_wakeup_dur = 0;
+
+float lis3dh_latest_x;
+float lis3dh_latest_y;
+float lis3dh_latest_z;
+
 static float lis3dh_mg_per_lsb_table[] = {0.0625f, 0.125f, 0.25f, 0.75f};
 static uint16_t lis3dh_samples_per_sec_table[] = {0, 1, 10, 25, 50, 100, 200, 400, 1600, 5000};
 
@@ -104,29 +128,35 @@ static void lis3dh_read_fifo(int samples, bool log)
 
 	// Errata: we skip the first sample of each FIFO as it's consistently invalid.
 
-	if (channel_start_packet(CHANNEL_ACCEL_X, lis3dh_quant, timestamp, samples_per_sec, samples - 1)) {
+	if (channel_start_packet(CHANNEL_ACCEL_X, lis3dh_quant, timestamp, samples_per_sec,
+				 samples - 1)) {
 		for (int i = 1; i < samples; i++) {
 			int offset = 1 + i * 6;
 			int16_t value = (int16_t)(rx_buf[offset + 1] << 8 | rx_buf[offset + 0]);
-			channel_add_packet_sample(value * mg_scale);
+			lis3dh_latest_x = value * mg_scale;
+			channel_add_packet_sample(lis3dh_latest_x);
 		}
 		channel_finish_packet();
 	}
 
-	if (channel_start_packet(CHANNEL_ACCEL_Y, lis3dh_quant, timestamp, samples_per_sec, samples - 1)) {
+	if (channel_start_packet(CHANNEL_ACCEL_Y, lis3dh_quant, timestamp, samples_per_sec,
+				 samples - 1)) {
 		for (int i = 1; i < samples; i++) {
 			int offset = 1 + i * 6;
 			int16_t value = (int16_t)(rx_buf[offset + 3] << 8 | rx_buf[offset + 2]);
-			channel_add_packet_sample(value * mg_scale);
+			lis3dh_latest_y = value * mg_scale;
+			channel_add_packet_sample(lis3dh_latest_y);
 		}
 		channel_finish_packet();
 	}
 
-	if (channel_start_packet(CHANNEL_ACCEL_Z, lis3dh_quant, timestamp, samples_per_sec, samples - 1)) {
+	if (channel_start_packet(CHANNEL_ACCEL_Z, lis3dh_quant, timestamp, samples_per_sec,
+				 samples - 1)) {
 		for (int i = 1; i < samples; i++) {
 			int offset = 1 + i * 6;
 			int16_t value = (int16_t)(rx_buf[offset + 5] << 8 | rx_buf[offset + 4]);
-			channel_add_packet_sample(value * mg_scale);
+			lis3dh_latest_z = value * mg_scale;
+			channel_add_packet_sample(lis3dh_latest_z);
 		}
 		channel_finish_packet();
 	}
@@ -134,10 +164,11 @@ static void lis3dh_read_fifo(int samples, bool log)
 
 static void lis3dh_thread_main(void *, void *, void *)
 {
-	while (1) {
+	for (;;) {
 		uint32_t samples_per_sec = lis3dh_samples_per_sec_table[lis3dh_rate];
 		// LOG_INF("samples_per_sec: %d", samples_per_sec);
-		uint32_t fifo_fill_usec = samples_per_sec ? lis3dh_watermark * 1000000 / samples_per_sec : 1000000;
+		uint32_t fifo_fill_usec =
+			samples_per_sec ? lis3dh_watermark * 1000000 / samples_per_sec : 1000000;
 		// LOG_INF("fifo_fill_usec: %d", fifo_fill_usec);
 		k_usleep(fifo_fill_usec);
 
@@ -162,39 +193,28 @@ static void lis3dh_thread_main(void *, void *, void *)
 K_THREAD_STACK_DEFINE(lis3dh_thread_stack, 1024);
 struct k_thread lis3dh_thread;
 
-static void lis3dh_int_handler(const struct device *port, struct gpio_callback *cb, uint32_t pins)
-{
-	ARG_UNUSED(port);
-	ARG_UNUSED(cb);
-	ARG_UNUSED(pins);
-
-	uint8_t src = spi_read_uint8(&lis3dh, LIS3DH_REG_INT1_SRC);
-	(void)src;
-
-	// LOG_INF("INT triggered by %x", src);
-}
-
 static void lis3dh_config(void)
 {
-	uint8_t config1 = (lis3dh_rate << 4) | LIS3DH_REG_CTRL_REG1_ZEN | LIS3DH_REG_CTRL_REG1_YEN |
-			  LIS3DH_REG_CTRL_REG1_XEN |
-			  (lis3dh_mode == LIS3DH_MODE_LOW_POWER ? LIS3DH_REG_CTRL_REG1_LPEN : 0);
-	uint8_t config2 = 0;
-	uint8_t config3 = 0;
-	uint8_t config4 = (lis3dh_scale << 4) |
-			  (lis3dh_mode == LIS3DH_MODE_HIGH_RES ? LIS3DH_REG_CTRL_REG4_HR : 0);
-	uint8_t config5 = LIS3DH_REG_CTRL_REG5_FIFO_EN;
-	uint8_t fifoctrl = LIS3DH_REG_FIFO_CTRL_FM_FIFO | lis3dh_watermark;
+	uint8_t ctrl_reg1 = (lis3dh_rate << 4) | LIS3DH_REG_CTRL_REG1_ZEN |
+			    LIS3DH_REG_CTRL_REG1_YEN | LIS3DH_REG_CTRL_REG1_XEN |
+			    (lis3dh_mode == LIS3DH_MODE_LOW_POWER ? LIS3DH_REG_CTRL_REG1_LPEN : 0);
+	uint8_t ctrl_reg4 = (lis3dh_scale << 4) |
+			    (lis3dh_mode == LIS3DH_MODE_HIGH_RES ? LIS3DH_REG_CTRL_REG4_HR : 0);
+	uint8_t ctrl_reg5 = LIS3DH_REG_CTRL_REG5_FIFO_EN;
+	uint8_t fifo_ctrl = LIS3DH_REG_FIFO_CTRL_FM_FIFO | lis3dh_watermark;
 
-	spi_write_uint8(&lis3dh, LIS3DH_REG_CTRL_REG1, config1);
-	spi_write_uint8(&lis3dh, LIS3DH_REG_CTRL_REG2, config2);
-	spi_write_uint8(&lis3dh, LIS3DH_REG_CTRL_REG3, config3);
-	spi_write_uint8(&lis3dh, LIS3DH_REG_CTRL_REG4, config4);
-	spi_write_uint8(&lis3dh, LIS3DH_REG_CTRL_REG5, config5);
-	spi_write_uint8(&lis3dh, LIS3DH_REG_FIFO_CTRL, fifoctrl);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_CTRL_REG1, ctrl_reg1);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_CTRL_REG2, 0);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_CTRL_REG3, 0);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_CTRL_REG4, ctrl_reg4);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_CTRL_REG5, ctrl_reg5);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_CTRL_REG6, 0);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_FIFO_CTRL, fifo_ctrl);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_INT1_CFG, 0);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_INT1_THS, 0);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_INT1_DURATION, 0);
 
-	// Drain and discard any existing samples in FIFO
-	lis3dh_read_fifo(32, false);
+	lis3dh_read_fifo(32, false); // Drain and discard any existing samples in FIFO
 }
 
 void lis3dh_init(void)
@@ -205,14 +225,6 @@ void lis3dh_init(void)
 		return;
 	}
 
-	spi_read_uint8(&lis3dh, LIS3DH_REG_INT1_SRC); // Clear any pending interrupts
-
-	gpio_pin_configure_dt(&lis3dh_int, GPIO_INPUT);
-	gpio_pin_interrupt_configure_dt(&lis3dh_int, GPIO_INT_EDGE_TO_ACTIVE);
-
-	gpio_init_callback(&lis3dh_gpio_cb, lis3dh_int_handler, BIT(lis3dh_int.pin));
-	gpio_add_callback(lis3dh_int.port, &lis3dh_gpio_cb);
-
 	lis3dh_config();
 
 	k_thread_create(&lis3dh_thread, lis3dh_thread_stack,
@@ -222,17 +234,60 @@ void lis3dh_init(void)
 	LOG_INF("initialized");
 }
 
-void lis3dh_latest(int16_t *x, int16_t *y, int16_t *z)
+void lis3dh_latest(float *x, float *y, float *z)
 {
-	// *x = log_x[log_accel_count - 1];
-	// *y = log_y[log_accel_count - 1];
-	// *z = log_z[log_accel_count - 1];
+	*x = lis3dh_latest_x;
+	*y = lis3dh_latest_y;
+	*z = lis3dh_latest_z;
+}
+
+volatile uint8_t lis3dh_int_triggered;
+
+static void lis3dh_int_handler(const struct device *port, struct gpio_callback *cb, uint32_t pins)
+{
+	ARG_UNUSED(port);
+	ARG_UNUSED(cb);
+	ARG_UNUSED(pins);
+
+	// uint8_t int_src = spi_read_uint8(&lis3dh, LIS3DH_REG_INT1_SRC);
+	// LOG_INF("INT triggered by %x", int_src);
+
+	lis3dh_int_triggered = 1;
+
+	// LOG_INF("inttttt %d", lis3dh_int_triggered);
+}
+
+void lis3dh_wake_on_z(void)
+{
+	k_thread_abort(&lis3dh_thread);
+	lis3dh_read_fifo(32, false); // Drain and discard any existing samples in FIFO
+
+	spi_read_uint8(&lis3dh, LIS3DH_REG_INT1_SRC); // Clear any pending interrupts
+
+	gpio_pin_configure_dt(&lis3dh_int, GPIO_INPUT);
+	gpio_pin_interrupt_configure_dt(&lis3dh_int, GPIO_INT_LEVEL_ACTIVE);
+
+	gpio_init_callback(&lis3dh_gpio_cb, lis3dh_int_handler, BIT(lis3dh_int.pin));
+	gpio_add_callback(lis3dh_int.port, &lis3dh_gpio_cb);
+
+	spi_write_uint8(&lis3dh, LIS3DH_REG_CTRL_REG1,
+			(LIS3DH_RATE_1_HZ << 4) | LIS3DH_REG_CTRL_REG1_ZEN |
+				LIS3DH_REG_CTRL_REG1_LPEN);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_CTRL_REG2, 0);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_CTRL_REG3, LIS3DH_REG_CTRL_REG3_I1_IA1);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_CTRL_REG4, LIS3DH_SCALE_4G << 4);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_CTRL_REG5, 0);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_CTRL_REG6, 0);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_FIFO_CTRL, 0);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_INT1_CFG, LIS3DH_REG_INT1_CFG_ZHIE);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_INT1_THS, lis3dh_z_wakeup_thr / 32);
+	spi_write_uint8(&lis3dh, LIS3DH_REG_INT1_DURATION, lis3dh_z_wakeup_dur);
+
+	spi_read_uint8(&lis3dh, LIS3DH_REG_INT1_SRC); // One more clear pending
 }
 
 static const char *lis3dh_mode_names[] = {"low_power", "normal", "high_res"};
-
 static const char *lis3dh_scale_names[] = {"2g", "4g", "8g", "16g"};
-
 static const char *lis3dh_rate_names[] = {"0hz",   "1hz",   "10hz",  "25hz",   "50hz",
 					  "100hz", "200hz", "400hz", "1.6khz", "5khz"};
 
@@ -274,13 +329,12 @@ static int cmd_lis3dh_rate(const struct shell *shell, size_t argc, char *argv[])
 
 static int cmd_lis3dh_quant(const struct shell *shell, size_t argc, char *argv[])
 {
-    int index =
-        cmd_table_lookup(shell, quantize_names, QUANTIZE_COUNT, argv[1]);
-    if (index < 0) {
-        return -1;
-    }
-    lis3dh_quant = (enum quantize)index;
-    return 0;
+	int index = cmd_table_lookup(shell, quantize_names, QUANTIZE_COUNT, argv[1]);
+	if (index < 0) {
+		return -1;
+	}
+	lis3dh_quant = (enum quantize)index;
+	return 0;
 }
 
 static int cmd_lis3dh_status(const struct shell *shell, size_t argc, char *argv[])

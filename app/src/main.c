@@ -5,8 +5,10 @@
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/hwinfo.h>
 #include <zephyr/drivers/spi.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/poweroff.h>
 
 #include <app_version.h>
 
@@ -16,8 +18,10 @@ LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define LED0_NODE DT_NODELABEL(led0)
 #define LED1_NODE DT_NODELABEL(led1)
-#define LED2_NODE DT_NODELABEL(led2)
-#define LED3_NODE DT_NODELABEL(led3)
+// #define LED2_NODE DT_NODELABEL(led2)
+// #define LED3_NODE DT_NODELABEL(led3)
+
+#define BTN0_NODE DT_NODELABEL(btn0)
 
 //
 // TODO:
@@ -48,8 +52,8 @@ LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 
 static const struct gpio_dt_spec led0 = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 static const struct gpio_dt_spec led1 = GPIO_DT_SPEC_GET(LED1_NODE, gpios);
-static const struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(LED2_NODE, gpios);
-static const struct gpio_dt_spec led3 = GPIO_DT_SPEC_GET(LED3_NODE, gpios);
+// static const struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(LED2_NODE, gpios);
+// static const struct gpio_dt_spec led3 = GPIO_DT_SPEC_GET(LED3_NODE, gpios);
 
 static const struct device *spi_dev = DEVICE_DT_GET(SPI_NODE);
 
@@ -157,16 +161,62 @@ int cmd_table_lookup(const struct shell *shell, const char **table, size_t table
 	return -1;
 }
 
+int print_reset_cause(uint32_t reset_cause)
+{
+	int32_t ret;
+	uint32_t supported;
+
+	ret = hwinfo_get_supported_reset_cause((uint32_t *) &supported);
+
+	if (ret || !(reset_cause & supported)) {
+		return -ENOTSUP;
+	}
+
+	if (reset_cause & RESET_DEBUG) {
+		LOG_INF("Reset by debugger.\n");
+	} else if (reset_cause & RESET_CLOCK) {
+		LOG_INF("Wakeup from System OFF by GRTC.\n");
+	} else if (reset_cause & RESET_LOW_POWER_WAKE) {
+		LOG_INF("Wakeup from System OFF by GPIO.\n");
+	} else  {
+		LOG_INF("Other wake up cause 0x%08X.\n", reset_cause);
+	}
+
+	return 0;
+}
+
+const struct gpio_dt_spec btn0 = GPIO_DT_SPEC_GET(BTN0_NODE, gpios);
+struct gpio_callback btn0_gpio_cb;
+K_EVENT_DEFINE(btn0_event);
+
+static void btn0_int_handler(const struct device *port, struct gpio_callback *cb, uint32_t pins)
+{
+	ARG_UNUSED(port);
+	ARG_UNUSED(cb);
+	ARG_UNUSED(pins);
+
+	k_event_post(&btn0_event, 1);
+
+}
+
 int main(void)
 {
 	k_msleep(500); // settle power
 
 	LOG_INF("KartCam Tire Sensor bring-up");
 
+	uint32_t reset_cause;
+	hwinfo_get_reset_cause(&reset_cause);
+	print_reset_cause(reset_cause);
+
 	gpio_pin_configure_dt(&led0, GPIO_OUTPUT_INACTIVE);
 	gpio_pin_configure_dt(&led1, GPIO_OUTPUT_INACTIVE);
-	gpio_pin_configure_dt(&led2, GPIO_OUTPUT_INACTIVE);
-	gpio_pin_configure_dt(&led3, GPIO_OUTPUT_INACTIVE);
+
+	gpio_pin_configure_dt(&btn0, GPIO_INPUT);
+	gpio_pin_interrupt_configure_dt(&btn0, GPIO_INT_EDGE_TO_ACTIVE);
+
+	gpio_init_callback(&btn0_gpio_cb, btn0_int_handler, BIT(btn0.pin));
+	gpio_add_callback(btn0.port, &btn0_gpio_cb);
 
 	// int err;
 
@@ -210,41 +260,61 @@ int main(void)
 	lis3dh_init();
 	dps368_init();
 
-	int n = 0;
+	for (;;)
+	{
+		gpio_pin_set_dt(&led0, 0);
+		gpio_pin_set_dt(&led1, 0);
 
-	while (1) {
-		// read rtt console for commands to start/stop logging, set rates, etc.
+		bool record = false;
 
-		if (n % 4 == 0) {
+		for (int n = 10; n >= 0; n--) {
 			gpio_pin_toggle_dt(&led0);
-		}
-		if (n % 4 == 1) {
-			gpio_pin_toggle_dt(&led1);
-		}
-		if (n % 4 == 2) {
-			gpio_pin_toggle_dt(&led2);
-		}
-		if (n % 4 == 3) {
-			gpio_pin_toggle_dt(&led3);
+
+			LOG_INF("sleep in %d seconds...", n);
+
+			// float x, y, z;
+			// lis3dh_latest(&x, &y, &z);
+			// LOG_INF("  accel: x=%f mg, y=%f mg, z=%f mg", (double)x, (double)y, (double)z);
+
+			uint32_t events = k_event_wait(&btn0_event, 0xFFF, true, K_MSEC(1000));
+			if (events & 1) {
+				LOG_INF("button pressed!");
+				k_msleep(10);
+				record = true;
+			}
+
+			if (record) {
+				break;
+			}
 		}
 
-		k_msleep(1000);
-
-		if (n % 4 == 0) {
-			gpio_pin_toggle_dt(&led0);
-		}
-		if (n % 4 == 1) {
-			gpio_pin_toggle_dt(&led1);
-		}
-		if (n % 4 == 2) {
-			gpio_pin_toggle_dt(&led2);
-		}
-		if (n % 4 == 3) {
-			gpio_pin_toggle_dt(&led3);
+		if (!record) {
+			break;
 		}
 
-		n++;
+		LOG_INF("recording...");
+
+		gpio_pin_set_dt(&led0, 0);
+		gpio_pin_set_dt(&led1, 1);
+
+		uint32_t record_ms = 15 * 60 * 1000;
+		uint32_t events = k_event_wait(&btn0_event, 0xFFF, true, K_MSEC(record_ms));
+		if (events & 1) {
+			LOG_INF("button pressed!");
+			k_msleep(10);
+		}
 	}
+
+	gpio_pin_set_dt(&led0, 0);
+	gpio_pin_set_dt(&led1, 0);
+	dps368_stop();
+
+	LOG_INF("entering deep sleep, wake on interrupt");
+	k_msleep(100);
+
+	lis3dh_wake_on_z();
+	hwinfo_clear_reset_cause();
+	sys_poweroff();	
 
 	return 0;
 }

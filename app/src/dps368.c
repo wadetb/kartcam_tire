@@ -267,6 +267,16 @@ void dps368_latest(float *temperature, float *pressure)
 	*pressure = dps368_latest_prs_comp;
 }
 
+void dps368_stop(void)
+{
+	k_thread_abort(&dps368_thread);
+
+	spi_write_uint8(&dps368, DPS368_REG_TMP_CFG, 0);
+	spi_write_uint8(&dps368, DPS368_REG_PRS_CFG, 0);
+	spi_write_uint8(&dps368, DPS368_REG_CFG_REG, 0);
+	spi_write_uint8(&dps368, DPS368_REG_MEAS_CFG, 0);
+}
+
 static const char *dps368_rate_names[] = {
 	"1hz", "2hz", "4hz", "8hz", "16hz", "32hz", "64hz", "128hz",
 };

@@ -50,8 +50,10 @@ void channel_finish_packet();
 
 void dps368_init(void);
 void dps368_latest(float *temperature, float *pressure);
+void dps368_stop(void);
 
 void lis3dh_init(void);
-void lis3dh_latest(int16_t *x, int16_t *y, int16_t *z);
+void lis3dh_latest(float *x, float *y, float *z);
+void lis3dh_wake_on_z(void);
 
 #endif
