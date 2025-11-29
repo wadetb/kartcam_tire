@@ -269,8 +269,16 @@ static int cmd_channel_status(const struct shell *shell, size_t argc, char *argv
 
 	uint32_t time_window = channel_timestamp() - first_timestamp;
 
+	uint32_t buffer_used;
+	if (read_pos > write_pos) {
+		buffer_used = (wrap_pos - read_pos) + write_pos;
+	} else {
+		buffer_used = write_pos - read_pos;
+	}
+
 	shell_fprintf(shell, SHELL_NORMAL, "buffer status:\n");
 	shell_fprintf(shell, SHELL_NORMAL, " buffer_size: %u\n", buffer_size);
+	shell_fprintf(shell, SHELL_NORMAL, " buffer_used: %u\n", buffer_used);
 	shell_fprintf(shell, SHELL_NORMAL, " time_window: %u\n", time_window);
 
 	shell_fprintf(shell, SHELL_NORMAL, "channel status:\n");

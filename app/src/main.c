@@ -25,21 +25,16 @@ LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 
 //
 // TODO:
-// + Use the RTT console to emulate BLE commands
-// + Make sampling rate, accuracy, etc. configurable through a command syntax
-// + Save settings to NVM
+// + Drop packets unless recording.
+// + Expose per-channel sample rates via shell commands.
+// + Expose recording duration and status via shell command.
+// + Explicit sleep command.
+// + Save settings to NVM.
+// + Reset NVRAM if button held at startup?
 // + Use "at least" values as input and map to hardware.
-// + Refactor packet recording code into a common "channel" module
 // + Add huffman compression with static dictionaries
-// + Test different quantization for temperature and pressure - instead of min / max just use step
-// size
 // + Follow Micropython framing format with timestamps, etc.
-// + Split accel into 3 separate "channels" so they can be toggled independently
-// + Use the lis3dhtr interrupt to wake from Deep Sleep.
-// + Implement Deep Sleep for all the peripherals.
 // + Use Zephyr DTS to disable unwanted nRF units - extra SPI etc.
-// + Figure out how much RAM we actually have and implement that in the device tree.
-// + Use the physical button for something, like clearing nvram
 //
 
 //
@@ -196,12 +191,11 @@ static void btn0_int_handler(const struct device *port, struct gpio_callback *cb
 	ARG_UNUSED(pins);
 
 	k_event_post(&btn0_event, 1);
-
 }
 
 int main(void)
 {
-	k_msleep(500); // settle power
+	k_msleep(100); // settle power
 
 	LOG_INF("KartCam Tire Sensor bring-up");
 
